@@ -68,6 +68,8 @@ const photos = [
   { code: "FILE_005K", title: "Street Frame", location: "Outdoor path", mood: "Open", meta: "Outdoor / Smile", tags: ["Street", "Portrait"], src: "images/photo_5_2026-06-15_00-11-00.jpg", webp: "images/photo_5_2026-06-15_00-11-00.webp", alt: "MC ZORRO smiling outdoors", width: 1920, height: 2560 },
   { code: "FILE_005L", title: "Lost Photo", location: "Sunset street", mood: "Soft", meta: "Sunset / Street", tags: ["Street", "Portrait"], src: "images/photo_3_2026-06-15_00-11-00.jpg", webp: "images/photo_3_2026-06-15_00-11-00.webp", alt: "MC ZORRO standing outdoors at sunset", width: 960, height: 1280 },
   { code: "FILE_005M", title: "Backroom Flash", location: "Backroom", mood: "Locked", meta: "Interior / Flash", tags: ["Backroom"], src: "images/archive_02_backroom_flash.jpg", webp: "images/archive_02_backroom_flash.webp", alt: "MC ZORRO in a dark backroom flash photo", width: 768, height: 1024 },
+  { code: "FILE_005N", title: "Mall Signal", location: "Mall frame", mood: "Signal", meta: "Mall / Vodafone", tags: ["Portrait", "Street"], src: "images/archive_08_mall_phone.jpg", alt: "MC ZORRO holding a phone displaying another face", width: 960, height: 960 },
+  { code: "FILE_005O", title: "Transit Sleep", location: "Bus cabin", mood: "Soft", meta: "Transit / Sleep", tags: ["Portrait"], src: "images/archive_09_bus_sleep.jpg", alt: "MC ZORRO sleeping in a bus with orange curtains", width: 768, height: 1024 },
 ];
 
 const archiveFilters = ["All", "Night", "Festival", "Portrait", "Backroom", "Street", "Group"];
@@ -135,7 +137,7 @@ function responsiveSrcset(filename, format, fallback) {
 
 function sizedImage(filename, width, format = "webp") {
   const widths = responsiveWidths[filename];
-  if (!widths) return filename.replace(/\.[^.]+$/, `.${format}`);
+  if (!widths) return filename;
   const best = widths.find((candidate) => candidate >= width) || widths[widths.length - 1];
   return imageVariant(filename, best, format);
 }
@@ -147,7 +149,7 @@ function pictureHTML(item, sizes) {
   return `
     <picture>
       ${avif ? `<source srcset="${escapeHTML(avif)}" type="image/avif" sizes="${escapeHTML(sizes)}">` : ""}
-      <source srcset="${escapeHTML(webp)}" type="image/webp" sizes="${escapeHTML(sizes)}">
+      ${webp ? `<source srcset="${escapeHTML(webp)}" type="image/webp" sizes="${escapeHTML(sizes)}">` : ""}
       <img src="${escapeHTML(item.src || item.image)}" alt="${escapeHTML(item.alt)}" width="${item.width || 768}" height="${item.height || 1024}" loading="lazy" decoding="async" sizes="${escapeHTML(sizes)}">
     </picture>
   `;
@@ -677,6 +679,15 @@ function setupHeroWaveform() {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
+  const monitorText = document.querySelector('.monitor-text');
+  const monitorFreq = document.querySelector('.monitor-freq');
+  if (monitorText) {
+    monitorText.textContent = "NOW SIGNALING: TRACK_001 / TRACK 1";
+  }
+  if (monitorFreq) {
+    monitorFreq.textContent = "BASEMENT PRESSURE";
+  }
+
   const barCount = 45;
   const barHeights = new Float32Array(barCount);
   const phases = Array.from({ length: barCount }, () => Math.random() * Math.PI * 2);
@@ -821,7 +832,11 @@ function setupHeroWaveform() {
     });
   });
 
-  observer.observe(canvas);
+  if (heroSection) {
+    observer.observe(heroSection);
+  } else {
+    draw();
+  }
 }
 
 

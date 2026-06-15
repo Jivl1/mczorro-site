@@ -430,7 +430,7 @@ function setupScrollState() {
       navAnchors.forEach((anchor) => {
         const active = anchor.getAttribute("href") === `#${id}`;
         anchor.classList.toggle("active", active);
-        if (active) anchor.setAttribute("aria-current", "location");
+        if (active) anchor.setAttribute("aria-current", "page");
         else anchor.removeAttribute("aria-current");
       });
       if (previewFile) previewFile.textContent = current.dataset.file || "FILE_000";
@@ -647,16 +647,15 @@ function copyWithSelection(text) {
 }
 
 async function copyText(text) {
-  let copied = copyWithSelection(text);
-  try {
-    if (!copied && navigator.clipboard?.writeText) {
+  if (navigator.clipboard?.writeText) {
+    try {
       await navigator.clipboard.writeText(text);
-      copied = true;
+      return true;
+    } catch (e) {
+      // Fallback below
     }
-  } catch {
-    copied = copyWithSelection(text);
   }
-  return copied;
+  return copyWithSelection(text);
 }
 
 function setupContactCopy() {
@@ -1098,26 +1097,8 @@ function setupAudioPlayer() {
       isPlaying = true;
       updatePlayState();
     } catch (err) {
-      // Autoplay blocked by browser policy - try very aggressively on ANY interaction
-      let hasStarted = false;
-      const startOnInteraction = async () => {
-        if (hasStarted) return;
-        try {
-          await audio.play();
-          hasStarted = true;
-          isPlaying = true;
-          updatePlayState();
-          cleanup();
-        } catch (e) {
-          // Ignore and keep trying on next interaction
-        }
-      };
-      const cleanup = () => {
-        const events = ["click", "keydown", "touchstart", "mousedown", "pointerdown", "scroll", "wheel", "mousemove"];
-        events.forEach(ev => document.removeEventListener(ev, startOnInteraction));
-      };
-      const events = ["click", "keydown", "touchstart", "mousedown", "pointerdown", "scroll", "wheel", "mousemove"];
-      events.forEach(ev => document.addEventListener(ev, startOnInteraction, { passive: true }));
+      // Autoplay blocked by browser policy - wait for user interaction.
+      // Removed the aggressive loop as it degrades user experience.
     }
   }
   attemptAutoplay();

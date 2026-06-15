@@ -673,90 +673,145 @@ function setupContactCopy() {
 
 /* 1. Hero Waveform Signal Monitor Animator */
 function setupHeroWaveform() {
-  const container = document.getElementById("hero-waveform");
-  if (!container) return;
+  const canvas = document.getElementById("hero-waveform");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
 
-  const barCount = 36;
-  const bars = [];
-  const phases = [];
-
-  // Generate bars
-  for (let i = 0; i < barCount; i++) {
-    const bar = document.createElement("div");
-    bar.className = "waveform-bar";
-    container.appendChild(bar);
-    bars.push(bar);
-    phases.push(Math.random() * Math.PI * 2);
-  }
+  const barCount = 45;
+  const barHeights = new Float32Array(barCount);
+  const phases = Array.from({ length: barCount }, () => Math.random() * Math.PI * 2);
 
   let speed = 0.04;
   let targetSpeed = 0.04;
   let modulation = 1.0;
   let targetModulation = 1.0;
+  let activity = 0.15;
+  let targetActivity = 0.15;
 
-  // Modulate signal speed/amplitude on mouse move over the hero area
   const heroSection = document.getElementById("top");
   if (heroSection) {
     heroSection.addEventListener("mousemove", (e) => {
       const rect = heroSection.getBoundingClientRect();
       const relY = (e.clientY - rect.top) / rect.height;
       const relX = (e.clientX - rect.left) / rect.width;
-      
-      // Control waveform properties dynamically
-      targetSpeed = 0.02 + relX * 0.07;
+      targetSpeed = 0.02 + relX * 0.08;
       targetModulation = 0.5 + (1 - relY) * 1.5;
     });
-
     heroSection.addEventListener("mouseleave", () => {
       targetSpeed = 0.04;
       targetModulation = 1.0;
     });
   }
 
+  // Listen to audio player state
+  window.addEventListener('zorro-play-state', (e) => {
+    targetActivity = e.detail.isPlaying ? 1.0 : 0.15;
+  });
+
+  window.addEventListener('zorro-track-change', (e) => {
+    const track = e.detail.track;
+    const monitorText = document.querySelector('.monitor-text');
+    const monitorFreq = document.querySelector('.monitor-freq');
+    if (monitorText) {
+      monitorText.textContent = `NOW SIGNALING: ${track.code} / ${track.title.toUpperCase()}`;
+    }
+    if (monitorFreq) {
+      monitorFreq.textContent = track.mood.toUpperCase();
+    }
+  });
+
   let globalPhase = 0;
   let isWaveformVisible = true;
   let animFrameId = null;
 
-  function animateWaveform() {
+  function draw() {
     if (!isWaveformVisible) return;
-    
+
     if (prefersReducedMotion) {
-      // static/calm state for reduced motion
-      bars.forEach((bar, index) => {
-        const val = Math.sin(index * 0.3) * 20 + 40;
-        bar.style.height = `${val}%`;
-      });
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ff3344';
+      for (let i = 0; i < barCount; i++) {
+        const x = (canvas.width / barCount) * i;
+        const w = (canvas.width / barCount) * 0.6;
+        const h = (Math.sin(i * 0.3) * 0.2 + 0.4) * canvas.height;
+        ctx.fillRect(x, canvas.height - h, w, h);
+      }
       return;
     }
 
-    // Interpolate towards target speed and modulation
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     speed += (targetSpeed - speed) * 0.1;
     modulation += (targetModulation - modulation) * 0.1;
-    globalPhase += speed;
+    activity += (targetActivity - activity) * 0.1;
+    globalPhase += speed * (activity * 1.5 + 0.5);
 
-    bars.forEach((bar, index) => {
-      const personalPhase = phases[index] + globalPhase;
-      // Combine multiple frequencies for a natural organic synth analyzer look
-      const signalValue = 
-        Math.sin(personalPhase) * 0.5 + 
-        Math.sin(personalPhase * 2.3 + index * 0.1) * 0.3 + 
-        Math.cos(personalPhase * 0.7 - index * 0.2) * 0.2;
-      
-      // Map to 10% - 95% range
-      let height = (signalValue * 40 + 55) * modulation;
-      height = Math.max(10, Math.min(95, height));
-      
-      bar.style.height = `${height}%`;
-    });
+    const w = canvas.width;
+    const h = canvas.height;
+    const barWidth = (w / barCount) * 0.65;
+    const barGap = (w / barCount) * 0.35;
 
-    animFrameId = requestAnimationFrame(animateWaveform);
+    // 1. Draw spectrum/equalizer bars
+    for (let i = 0; i < barCount; i++) {
+      const personalPhase = phases[i] + globalPhase;
+      const sig = Math.sin(personalPhase) * 0.4 
+                + Math.sin(personalPhase * 2.3 + i * 0.1) * 0.3 
+                + Math.cos(personalPhase * 0.7 - i * 0.2) * 0.3;
+
+      let targetH = (sig * 0.4 + 0.6) * h * modulation * (activity * 0.75 + 0.25);
+      if (activity > 0.5 && Math.random() > 0.94) {
+        targetH += Math.random() * 24 * activity;
+      }
+      targetH = Math.max(6, Math.min(h * 0.95, targetH));
+
+      barHeights[i] += (targetH - barHeights[i]) * 0.25;
+
+      const x = i * (barWidth + barGap);
+      const barH = barHeights[i];
+      const y = h - barH;
+
+      const gradient = ctx.createLinearGradient(x, y, x, h);
+      gradient.addColorStop(0, 'rgba(255, 51, 68, 0.95)');   // bright acid red
+      gradient.addColorStop(0.4, 'rgba(211, 41, 41, 0.65)');  // red-hot
+      gradient.addColorStop(1, 'rgba(36, 20, 47, 0.1)');      // purple/transparent
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, barWidth, barH, [2, 2, 0, 0]);
+      } else {
+        ctx.rect(x, y, barWidth, barH);
+      }
+      ctx.fill();
+    }
+
+    // 2. Draw active vector oscilloscope line overlay
+    ctx.beginPath();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = `rgba(255, 85, 102, ${activity * 0.6 + 0.25})`;
+    ctx.shadowColor = 'rgba(255, 51, 68, 0.5)';
+    ctx.shadowBlur = activity * 6 + 1;
+
+    for (let i = 0; i <= w; i += 5) {
+      const t = i / w;
+      const wavePhase = t * Math.PI * 4 - globalPhase * 1.5;
+      const oscVal = Math.sin(wavePhase) * Math.cos(wavePhase * 0.5) * 16 * activity;
+      const baseLineHeight = h * 0.5 + Math.sin(globalPhase * 0.2) * 4;
+      const y = baseLineHeight + oscVal;
+      if (i === 0) ctx.moveTo(i, y);
+      else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    animFrameId = requestAnimationFrame(draw);
   }
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       isWaveformVisible = entry.isIntersecting;
       if (isWaveformVisible) {
-        if (!animFrameId) animateWaveform();
+        if (!animFrameId) draw();
       } else {
         if (animFrameId) {
           cancelAnimationFrame(animFrameId);
@@ -765,12 +820,8 @@ function setupHeroWaveform() {
       }
     });
   });
-  
-  if (heroSection) {
-    observer.observe(heroSection);
-  } else {
-    animateWaveform();
-  }
+
+  observer.observe(canvas);
 }
 
 
@@ -840,6 +891,8 @@ function setupAudioPlayer() {
     currentIndex = index;
     const track = playlist[index];
     
+    window.dispatchEvent(new CustomEvent('zorro-track-change', { detail: { track } }));
+
     if (titleDisplay) titleDisplay.textContent = track.title;
     if (codeDisplay) codeDisplay.textContent = track.code;
     if (moodDisplay) moodDisplay.textContent = `${track.mood} / ${track.year}`;
@@ -880,6 +933,8 @@ function setupAudioPlayer() {
   }
 
   function updatePlayState() {
+    window.dispatchEvent(new CustomEvent('zorro-play-state', { detail: { isPlaying } }));
+
     if (isPlaying) {
       iconPlay && (iconPlay.style.display = "none");
       iconPause && (iconPause.style.display = "");
@@ -1130,7 +1185,29 @@ function setupAudioPlayer() {
   });
 }
 
+function setupGrain() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  const imgData = ctx.createImageData(canvas.width, canvas.height);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const val = Math.floor(Math.random() * 255);
+    data[i] = val;
+    data[i + 1] = val;
+    data[i + 2] = val;
+    data[i + 3] = 16;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  const grain = document.querySelector(".grain");
+  if (grain) {
+    grain.style.backgroundImage = `url(${canvas.toDataURL()})`;
+  }
+}
+
 renderContent();
+setupGrain();
 setupLoader();
 setupHeader();
 setupSoundCloudLoader();

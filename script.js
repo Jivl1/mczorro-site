@@ -71,6 +71,7 @@ const photos = [
   { code: "FILE_005N", title: "Mall Signal", location: "Mall frame", mood: "Signal", meta: "Mall / Vodafone", tags: ["Portrait", "Street"], src: "images/archive_08_mall_phone.jpg", alt: "MC ZORRO holding a phone displaying another face", width: 960, height: 960 },
   { code: "FILE_005O", title: "Transit Sleep", location: "Bus cabin", mood: "Soft", meta: "Transit / Sleep", tags: ["Portrait"], src: "images/archive_09_bus_sleep.jpg", alt: "MC ZORRO sleeping in a bus with orange curtains", width: 768, height: 1024 },
   { code: "FILE_005P", title: "Mirror Clout", location: "Interior room", mood: "Refracted", meta: "Indoor / Reflection", tags: ["Backroom", "Portrait"], src: "images/archive_10_mirror_wardrobe.jpg", alt: "MC ZORRO reflected in a wardrobe mirror", width: 768, height: 1024 },
+  { code: "FILE_005Q", title: "Wizard Cat", location: "Room mirror", mood: "Silly", meta: "Indoor / Cat / Magic", tags: ["Backroom", "Portrait"], src: "images/archive_11_wizard_cat.jpg", alt: "Mirror selfie with Harry Cat wizard stickers and Certificate of Silliness", width: 768, height: 1365 },
 ];
 
 const archiveFilters = ["All", "Night", "Festival", "Portrait", "Backroom", "Street", "Group"];

@@ -39,6 +39,14 @@ const tracks = [
     description: "A pending transmission reserved for the next SoundCloud update.",
     primary: soundCloudURL,
   },
+  {
+    code: "TRACK_005",
+    title: "Track 5",
+    year: "2026",
+    mood: "Deep transmission",
+    description: "A newly surfaced audio file. Fresh from the source.",
+    primary: soundCloudURL,
+  },
 ];
 
 const events = [
@@ -871,6 +879,7 @@ function setupAudioPlayer() {
     { ...tracks[1], file: "music/mczorronusicweb2.mp3" },
     { ...tracks[2], file: "music/mczorronusicweb3.mp3" },
     { ...tracks[3], file: "music/mczorronusicweb4.mp3" },
+    { ...tracks[4], file: "music/mczorrotarck5.mp3" },
   ];
 
   const audio = new Audio();
